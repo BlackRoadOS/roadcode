@@ -1,8 +1,9 @@
-
 var __defProp = Object.defineProperty;
 var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
 
-// src/worker.js
+// src/index.js
+var __defProp2 = Object.defineProperty;
+var __name2 = /* @__PURE__ */ __name((target, value) => __defProp2(target, "name", { value, configurable: true }), "__name");
 var AGENTS = [
   // Compute fleet — real hardware, task-capable
   { id: "alice", name: "Alice", specialty: "Infrastructure & Routing", color: "#FF1D6C", type: "compute", ip: "192.168.4.49" },
@@ -35,35 +36,44 @@ function secureCors(request) {
   };
 }
 __name(secureCors, "secureCors");
+__name2(secureCors, "secureCors");
 var worker_default = {
   async fetch(request, env) {
     const url = new URL(request.url);
     const p = url.pathname;
     const cors = secureCors(request);
-    if (request.method === "OPTIONS") return new Response(null, { status: 204, headers: cors });
+    if (request.method === "OPTIONS")
+      return new Response(null, { status: 204, headers: cors });
     try {
       await initDB(env.DB);
-      if (p === "/api/health") return json({ status: "ok", service: "RoadCode", agents: AGENTS.length, version: "1.0.0" }, cors);
-      if (p === "/api/agents") return json({ agents: AGENTS }, cors);
-      if (p === "/api/tasks" && request.method === "GET") return json(await getTasks(env.DB, url), cors);
+      if (p === "/api/health")
+        return json({ status: "ok", service: "RoadCode", agents: AGENTS.length, version: "1.0.0" }, cors);
+      if (p === "/api/agents")
+        return json({ agents: AGENTS }, cors);
+      if (p === "/api/tasks" && request.method === "GET")
+        return json(await getTasks(env.DB, url), cors);
       if (p === "/api/tasks" && request.method === "POST") {
         const body = await request.json();
         return json(await createTask(env.DB, env.AI, body), cors, 201);
       }
       const taskMatch = p.match(/^\/api\/tasks\/([^/]+)$/);
-      if (taskMatch && request.method === "GET") return json(await getTask(env.DB, taskMatch[1]), cors);
+      if (taskMatch && request.method === "GET")
+        return json(await getTask(env.DB, taskMatch[1]), cors);
       if (taskMatch && request.method === "PUT") {
         const body = await request.json();
         return json(await updateTask(env.DB, taskMatch[1], body), cors);
       }
       const subMatch = p.match(/^\/api\/tasks\/([^/]+)\/subtasks$/);
-      if (subMatch && request.method === "GET") return json(await getSubtasks(env.DB, subMatch[1]), cors);
+      if (subMatch && request.method === "GET")
+        return json(await getSubtasks(env.DB, subMatch[1]), cors);
       if (p === "/api/deploy" && request.method === "POST") {
         const body = await request.json();
         return json(await deployTask(env.DB, env.AI, body), cors, 201);
       }
-      if (p === "/api/leaderboard") return json(await getLeaderboard(env.DB), cors);
-      if (p === "/api/stats") return json(await getStats(env.DB), cors);
+      if (p === "/api/leaderboard")
+        return json(await getLeaderboard(env.DB), cors);
+      if (p === "/api/stats")
+        return json(await getStats(env.DB), cors);
       return new Response(HTML, { headers: { ...cors, "Content-Type": "text/html; charset=utf-8" } });
     } catch (e) {
       return json({ error: e.message }, cors, 500);
@@ -74,10 +84,12 @@ function json(data, cors, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { ...cors, "Content-Type": "application/json" } });
 }
 __name(json, "json");
+__name2(json, "json");
 function uid() {
   return crypto.randomUUID().slice(0, 8);
 }
 __name(uid, "uid");
+__name2(uid, "uid");
 async function initDB(db) {
   await db.batch([
     db.prepare(`CREATE TABLE IF NOT EXISTS rc_tasks (
@@ -94,6 +106,7 @@ async function initDB(db) {
   ]);
 }
 __name(initDB, "initDB");
+__name2(initDB, "initDB");
 async function getTasks(db, url) {
   const status = url.searchParams.get("status");
   const agent = url.searchParams.get("agent");
@@ -118,16 +131,20 @@ async function getTasks(db, url) {
   return { tasks: r.results || [] };
 }
 __name(getTasks, "getTasks");
+__name2(getTasks, "getTasks");
 async function getTask(db, id) {
   const task = await db.prepare("SELECT * FROM rc_tasks WHERE id = ?").bind(id).first();
-  if (!task) throw new Error("task not found");
+  if (!task)
+    throw new Error("task not found");
   const subs = await db.prepare("SELECT * FROM rc_tasks WHERE parent_id = ? ORDER BY created_at").bind(id).all();
   const log = await db.prepare("SELECT * FROM rc_task_log WHERE task_id = ? ORDER BY created_at DESC LIMIT 20").bind(id).all();
   return { task, subtasks: subs.results || [], log: log.results || [] };
 }
 __name(getTask, "getTask");
+__name2(getTask, "getTask");
 async function createTask(db, ai, { title, description, priority, tags, assigned_to }) {
-  if (!title) throw new Error("title required");
+  if (!title)
+    throw new Error("title required");
   const id = uid();
   const agent = assigned_to || pickAgent(title + " " + (description || ""));
   await db.prepare("INSERT INTO rc_tasks (id, title, description, priority, assigned_to, tags) VALUES (?,?,?,?,?,?)").bind(id, title, description || "", priority || "normal", agent, JSON.stringify(tags || [])).run();
@@ -135,9 +152,11 @@ async function createTask(db, ai, { title, description, priority, tags, assigned
   return { id, title, assigned_to: agent, status: "pending" };
 }
 __name(createTask, "createTask");
+__name2(createTask, "createTask");
 async function updateTask(db, id, { status, assigned_to }) {
   const task = await db.prepare("SELECT * FROM rc_tasks WHERE id = ?").bind(id).first();
-  if (!task) throw new Error("task not found");
+  if (!task)
+    throw new Error("task not found");
   if (status) {
     const completed = status === "completed" ? ", completed_at = datetime('now')" : "";
     await db.prepare(`UPDATE rc_tasks SET status = ?, updated_at = datetime('now')${completed} WHERE id = ?`).bind(status, id).run();
@@ -150,17 +169,20 @@ async function updateTask(db, id, { status, assigned_to }) {
   return { ok: true };
 }
 __name(updateTask, "updateTask");
+__name2(updateTask, "updateTask");
 async function getSubtasks(db, parentId) {
   const r = await db.prepare("SELECT * FROM rc_tasks WHERE parent_id = ? ORDER BY created_at").bind(parentId).all();
   return { subtasks: r.results || [] };
 }
 __name(getSubtasks, "getSubtasks");
+__name2(getSubtasks, "getSubtasks");
 async function deployTask(db, ai, { title, description, priority }) {
-  if (!title) throw new Error("title required");
+  if (!title)
+    throw new Error("title required");
   const id = uid();
   const lead = pickAgent(title + " " + (description || ""));
   await db.prepare("INSERT INTO rc_tasks (id, title, description, priority, assigned_to, status) VALUES (?,?,?,?,?,?)").bind(id, title, description || "", priority || "high", lead, "in_progress").run();
-  await logAction(db, id, "deployed", lead, "Task deployed — breaking into subtasks");
+  await logAction(db, id, "deployed", lead, "Task deployed \u2014 breaking into subtasks");
   let subtasks = [];
   try {
     const r = await ai.run("@cf/meta/llama-3.1-8b-instruct", {
@@ -174,7 +196,8 @@ Description: ${description || title}` }
     });
     if (r?.response) {
       const match = r.response.match(/\[[\s\S]*\]/);
-      if (match) subtasks = JSON.parse(match[0]);
+      if (match)
+        subtasks = JSON.parse(match[0]);
     }
   } catch {
   }
@@ -196,6 +219,7 @@ Description: ${description || title}` }
   return { id, title, lead, status: "in_progress", subtasks: created };
 }
 __name(deployTask, "deployTask");
+__name2(deployTask, "deployTask");
 async function getLeaderboard(db) {
   const r = await db.prepare(`SELECT assigned_to as agent, COUNT(*) as total,
     SUM(CASE WHEN status='completed' THEN 1 ELSE 0 END) as completed,
@@ -204,6 +228,7 @@ async function getLeaderboard(db) {
   return { leaderboard: r.results || [] };
 }
 __name(getLeaderboard, "getLeaderboard");
+__name2(getLeaderboard, "getLeaderboard");
 async function getStats(db) {
   const total = await db.prepare("SELECT COUNT(*) as c FROM rc_tasks").first();
   const active = await db.prepare("SELECT COUNT(*) as c FROM rc_tasks WHERE status='in_progress'").first();
@@ -212,24 +237,36 @@ async function getStats(db) {
   return { total: total?.c || 0, active: active?.c || 0, completed: completed?.c || 0, pending: pending?.c || 0, agents: AGENTS.length };
 }
 __name(getStats, "getStats");
+__name2(getStats, "getStats");
 async function logAction(db, taskId, action, agentId, detail) {
   await db.prepare("INSERT INTO rc_task_log (id, task_id, action, agent_id, detail) VALUES (?,?,?,?,?)").bind(uid(), taskId, action, agentId || "", detail || "").run();
 }
 __name(logAction, "logAction");
+__name2(logAction, "logAction");
 function pickAgent(text) {
   const t = text.toLowerCase();
-  if (/infra|route|network|dns|nginx/.test(t)) return "alice";
-  if (/ai|ml|model|train|llm/.test(t)) return "cecilia";
-  if (/deploy|docker|container|devops/.test(t)) return "octavia";
-  if (/web|frontend|ui|html|css/.test(t)) return "lucidia";
-  if (/security|encrypt|auth|cert/.test(t)) return "cipher";
-  if (/script|shell|automat|cron/.test(t)) return "shellfish";
-  if (/test|qa|check|verify/.test(t)) return "scout";
-  if (/research|search|find|docs/.test(t)) return "oracle";
-  if (/message|chat|notify|alert/.test(t)) return "echo";
+  if (/infra|route|network|dns|nginx/.test(t))
+    return "alice";
+  if (/ai|ml|model|train|llm/.test(t))
+    return "cecilia";
+  if (/deploy|docker|container|devops/.test(t))
+    return "octavia";
+  if (/web|frontend|ui|html|css/.test(t))
+    return "lucidia";
+  if (/security|encrypt|auth|cert/.test(t))
+    return "cipher";
+  if (/script|shell|automat|cron/.test(t))
+    return "shellfish";
+  if (/test|qa|check|verify/.test(t))
+    return "scout";
+  if (/research|search|find|docs/.test(t))
+    return "oracle";
+  if (/message|chat|notify|alert/.test(t))
+    return "echo";
   return "atlas";
 }
 __name(pickAgent, "pickAgent");
+__name2(pickAgent, "pickAgent");
 var HTML = `<!DOCTYPE html>
 <html lang="en"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
@@ -564,5 +601,5 @@ init();setInterval(async function(){try{var r=await fetch('/api/tasks');tasks=(a
 export {
   worker_default as default
 };
-//# sourceMappingURL=worker.js.map
+//# sourceMappingURL=index.js.map
 
